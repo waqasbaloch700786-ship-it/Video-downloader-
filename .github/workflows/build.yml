@@ -7,13 +7,24 @@ jobs:
       - uses: actions/checkout@v4
       - name: Unzip Project
         run: |
-          for f in *.zip; do unzip -o "$f"; done || true
+          for f in *.zip; do unzip -o "$f" 2>/dev/null || true; done
           rm -f *.zip
-          if [ -f "AllVideoDownloader_Android_Project/gradlew" ]; then mv AllVideoDownloader_Android_Project/* .; mv AllVideoDownloader_Android_Project/.* . 2>/dev/null || true; fi
-          if [ -f "downloader/gradlew" ]; then mv downloader/* .; mv downloader/.* . 2>/dev/null || true; fi
-      - name: Fix Wrapper
+          ls -la
+          # find gradlew and move to root
+          ROOT=$(find . -maxdepth 3 -name gradlew -type f | head -1 | xargs dirname)
+          echo "Found root: $ROOT"
+          if [ "$ROOT" != "." ] && [ "$ROOT" != "" ]; then
+            cp -r $ROOT/* . 2>/dev/null || true
+            cp -r $ROOT/.* . 2>/dev/null || true
+          fi
+          ls -la
+          ls -la gradle/wrapper/ || true
+      - name: Fix Wrapper Jar
         run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then mkdir -p gradle/wrapper; curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradle/wrapper/gradle-wrapper.jar; fi
+          mkdir -p gradle/wrapper
+          # sahi wala link
+          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
+          ls -lh gradle/wrapper/gradle-wrapper.jar
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -22,9 +33,11 @@ jobs:
       - name: Build APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: VideoDownloader-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            **/build/outputs/apk/debug/*.apk

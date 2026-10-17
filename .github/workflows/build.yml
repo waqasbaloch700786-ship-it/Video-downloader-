@@ -19,11 +19,32 @@ jobs:
           for f in *.zip; do unzip -o "$f" || true; done
           rm -f *.zip
           DIR=$(dirname $(find . -name "gradlew" -type f | head -1))
+          echo "Project DIR=$DIR"
           cd "$DIR"
           echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-          gradle assembleDebug 2>&1 | tee build.log
+          
+          # --- FIX WRAPPER ---
+          mkdir -p gradle/wrapper
+          echo "Fixing wrapper properties to 8.11"
+          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.11-all.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+          # Download fresh wrapper jar
+          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
+          ls -lh gradle/wrapper/
+          
+          # Build with wrapper now (checksum issue fixed)
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee build.log || gradle assembleDebug --stacktrace 2>&1 | tee build.log
+          
           echo "==== APK SEARCH ===="
-          find . -name "*.apk" -type f || true
+          find . -name "*.apk" -type f
       - name: Upload build-log
         if: always()
         uses: actions/upload-artifact@v4

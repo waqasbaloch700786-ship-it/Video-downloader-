@@ -10,30 +10,24 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Setup Gradle 8.5
+      - name: Setup Gradle 8.11
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: 8.5
-      - name: Build APK Direct
+          gradle-version: 8.11
+      - name: Build APK
         run: |
           for f in *.zip; do unzip -o "$f" || true; done
           rm -f *.zip
           DIR=$(dirname $(find . -name "gradlew" -type f | head -1))
+          echo "Project DIR=$DIR"
           cd "$DIR"
           echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-          # build and capture log
-          gradle assembleDebug --stacktrace 2>&1 | tee build.log
-          echo "===== WHAT WENT WRONG ====="
-          grep -n -A 30 "What went wrong" build.log || cat build.log | head -n 300
-      - name: Upload Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: "**/build.log"
+          gradle assembleDebug --stacktrace
+          find . -name "*.apk" -type f
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: VideoDownloader-APK
           path: |
             **/build/outputs/apk/debug/*.apk
+            **/*.apk

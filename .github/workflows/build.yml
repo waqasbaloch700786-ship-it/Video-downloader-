@@ -17,38 +17,23 @@ jobs:
           rm -f *.zip
           MANIFEST=$(find . -type f -path "*/app/src/main/AndroidManifest.xml" | head -1)
           ROOT=$(dirname $(dirname $(dirname $(dirname "$MANIFEST"))))
-          echo "ROOT=$ROOT"
           cd "$ROOT"
+          echo "ROOT=$ROOT"
           echo "=== FIXING MISSING FILES ==="
           mkdir -p app/src/main/res/xml
           mkdir -p app/src/main/res/mipmap-hdpi
-          mkdir -p app/src/main/res/mipmap-mdpi
-          mkdir -p app/src/main/res/mipmap-xhdpi
-          mkdir -p app/src/main/res/mipmap-xxhdpi
-          # 1. data_extraction_rules.xml
-          if [ ! -f app/src/main/res/xml/data_extraction_rules.xml ]; then
           cat > app/src/main/res/xml/data_extraction_rules.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <data-extraction-rules>
-            <cloud-backup><include domain="sharedpref" path="."/><exclude domain="sharedpref" path="device.xml"/></cloud-backup>
-            <device-transfer><include domain="sharedpref" path="."/><exclude domain="sharedpref" path="device.xml"/></device-transfer>
-          </data-extraction-rules>
+          <data-extraction-rules><cloud-backup><include domain="sharedpref" path="."/><exclude domain="sharedpref" path="device.xml"/></cloud-backup><device-transfer><include domain="sharedpref" path="."/><exclude domain="sharedpref" path="device.xml"/></device-transfer></data-extraction-rules>
           EOF
-          fi
-          # 2. backup_rules.xml
-          if [ ! -f app/src/main/res/xml/backup_rules.xml ]; then
           cat > app/src/main/res/xml/backup_rules.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <full-backup-content><exclude domain="sharedpref" path="device.xml"/></full-backup-content>
+          <?xml version="1.0" encoding="utf-8"?><full-backup-content><exclude domain="sharedpref" path="device.xml"/></full-backup-content>
           EOF
-          fi
-          # 3. Create launcher icons if missing
+          # Install PIL
+          pip3 install pillow -q
           python3 - <<'PY'
           from PIL import Image
-          import os, glob
-          for path in glob.glob("app/src/main/res/mipmap-*/ic_launcher.png") + ["app/src/main/res/mipmap/ic_launcher.png"]:
-              if os.path.exists(path): continue
-          # create placeholder icons
+          import os, shutil
           def make_icon(p):
               os.makedirs(os.path.dirname(p), exist_ok=True)
               if not os.path.exists(p):
@@ -57,8 +42,6 @@ jobs:
                   print(f"Created {p}")
           make_icon("app/src/main/res/mipmap-hdpi/ic_launcher.png")
           make_icon("app/src/main/res/mipmap-hdpi/ic_launcher_round.png")
-          # copy to other mipmaps
-          import shutil
           for d in ["mipmap-mdpi","mipmap-xhdpi","mipmap-xxhdpi","mipmap"]:
               os.makedirs(f"app/src/main/res/{d}", exist_ok=True)
               for name in ["ic_launcher.png","ic_launcher_round.png"]:
@@ -67,9 +50,7 @@ jobs:
                   if not os.path.exists(dst):
                       shutil.copy(src,dst)
           PY
-          echo "=== Files fixed ==="
           ls -R app/src/main/res/xml/
-          ls -R app/src/main/res/mipmap-hdpi/
           rm -rf gradle/wrapper gradlew gradlew.bat
           echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
           echo "sdk.dir=$ANDROID_HOME" >> local.properties

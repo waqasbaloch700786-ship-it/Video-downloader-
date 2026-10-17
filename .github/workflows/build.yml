@@ -18,19 +18,18 @@ jobs:
         run: |
           for f in *.zip; do unzip -o "$f" || true; done
           rm -f *.zip
-          DIR=$(dirname $(find . -name gradlew -type f | head -1))
-          echo "Project: $DIR"
+          DIR=$(dirname $(find . -name "gradlew" -type f | head -1))
+          echo "Project DIR=$DIR"
           cd "$DIR"
-          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-          # show project files
           ls -la
-          cat settings.gradle.kts 2>/dev/null || cat settings.gradle || true
-          # try build with info, show first error
-          gradle assembleDebug --stacktrace 2>&1 | head -n 400
+          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+          gradle assembleDebug --stacktrace
+          echo "==== APK SEARCH ===="
+          find . -type f -name "*.apk" | head -20
       - name: Upload APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: VideoDownloader-APK
           path: |
             **/build/outputs/apk/debug/*.apk
+            **/*.apk

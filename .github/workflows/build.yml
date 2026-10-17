@@ -9,30 +9,30 @@ jobs:
         run: |
           for f in *.zip; do unzip -o "$f" || true; done
           rm -f *.zip
-          echo "GRADLEW=$(find . -name gradlew -type f | head -1)" >> $GITHUB_ENV
           echo "PROJECT_DIR=$(dirname $(find . -name gradlew -type f | head -1))" >> $GITHUB_ENV
-          cat $GITHUB_ENV
+          echo "Found: $(cat $GITHUB_ENV)"
           ls -la
-          ls -la ${{ env.PROJECT_DIR }} 2>/dev/null || find . -maxdepth 3 -type d | head -20
+          ls -la $(dirname $(find . -name gradlew -type f | head -1)) || true
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Setup Gradle 8.5
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.5
-      - name: Build APK (No Wrapper)
+      - name: Build APK
         run: |
-          echo "Building in: ${{ env.PROJECT_DIR }}"
           cd ${{ env.PROJECT_DIR }}
-          ls -la
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          cat local.properties
           chmod +x gradlew || true
-          # agar wrapper jar missing hai to gradle se regenerate karo
           gradle wrapper --gradle-version 8.5 || true
-          # ab build karo, wrapper ki jagah direct gradle use karo
-          gradle assembleDebug --stacktrace
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace --info | tail -n 300
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

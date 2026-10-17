@@ -19,12 +19,19 @@ jobs:
           for f in *.zip; do unzip -o "$f" || true; done
           rm -f *.zip
           DIR=$(dirname $(find . -name "gradlew" -type f | head -1))
-          echo "Project DIR=$DIR"
           cd "$DIR"
           echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-          gradle assembleDebug --stacktrace
-          find . -name "*.apk" -type f
+          gradle assembleDebug 2>&1 | tee build.log
+          echo "==== APK SEARCH ===="
+          find . -name "*.apk" -type f || true
+      - name: Upload build-log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: "**/build.log"
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: VideoDownloader-APK

@@ -12,19 +12,24 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           
-      - name: Build APK - No Wrapper Check
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+          
+      - name: Build APK
         run: |
           for f in *.zip; do unzip -o "$f" || true; done
           rm -f *.zip
           DIR=$(dirname $(find . -name "build.gradle*" | head -1))
-          if [ -z "$DIR" ]; then DIR=$(dirname $(find . -name "gradlew" -type f | head -1)); fi
+          if [ -z "$DIR" ] || [ "$DIR" = "." ]; then DIR=$(find . -name "app" -type d | head -1); fi
           if [ -z "$DIR" ]; then DIR="."; fi
-          echo "Project DIR=$DIR"
-          cd "$DIR"
-          # delete broken wrapper to stop sha256 error
+          echo "DIR=$DIR"
+          cd "$DIR/.." 2>/dev/null || true
+          pwd
+          ls -la
           rm -rf gradle/wrapper gradlew gradlew.bat
-          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-          # install gradle 8.11 direct
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "sdk.dir is $ANDROID_HOME"
+          cat local.properties
           wget -q https://services.gradle.org/distributions/gradle-8.11-bin.zip
           unzip -q gradle-8.11-bin.zip -d /tmp
           export PATH=/tmp/gradle-8.11/bin:$PATH
@@ -33,6 +38,7 @@ jobs:
           find . -name "*.apk" -type f
           
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: VideoDownloader-APK

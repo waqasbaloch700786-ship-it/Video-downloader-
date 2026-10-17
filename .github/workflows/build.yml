@@ -12,30 +12,29 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-          
       - name: Build APK
         run: |
           for f in *.zip; do unzip -o "$f" || true; done
           rm -f *.zip
           DIR=$(dirname $(find . -name "build.gradle*" | head -1))
-          if [ -z "$DIR" ] || [ "$DIR" = "." ]; then DIR=$(find . -name "app" -type d | head -1); fi
+          if [ "$DIR" = "." ] || [ -z "$DIR" ]; then DIR=$(find . -name "app" -type d | head -1); fi
           if [ -z "$DIR" ]; then DIR="."; fi
           echo "DIR=$DIR"
           cd "$DIR/.." 2>/dev/null || true
+          if [ ! -f build.gradle ]; then cd "$DIR"; fi
           pwd
-          ls -la
           rm -rf gradle/wrapper gradlew gradlew.bat
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          echo "sdk.dir is $ANDROID_HOME"
+          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+          echo "sdk.dir=$ANDROID_HOME" >> local.properties
           cat local.properties
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls /usr/local/lib/android/sdk || true
           wget -q https://services.gradle.org/distributions/gradle-8.11-bin.zip
           unzip -q gradle-8.11-bin.zip -d /tmp
           export PATH=/tmp/gradle-8.11/bin:$PATH
           gradle --version
           gradle assembleDebug --stacktrace
-          find . -name "*.apk" -type f
+          find . -name "*.apk"
           
       - name: Upload APK
         if: always()

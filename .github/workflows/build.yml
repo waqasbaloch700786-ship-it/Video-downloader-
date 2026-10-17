@@ -10,31 +10,25 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Build APK (All in One)
+      - name: Setup Gradle 8.5
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+      - name: Build APK Direct
         run: |
-          # 1. Unzip
           for f in *.zip; do unzip -o "$f" || true; done
           rm -f *.zip
-          # 2. Find gradlew
-          GRADLEW_FILE=$(find . -name gradlew -type f | head -1)
-          echo "Found gradlew at: $GRADLEW_FILE"
-          PROJECT_DIR=$(dirname "$GRADLEW_FILE")
-          echo "Project dir: $PROJECT_DIR"
-          ls -la "$PROJECT_DIR"
-          # 3. Setup SDK
-          echo "sdk.dir=/usr/local/lib/android/sdk" > "$PROJECT_DIR/local.properties"
-          cat "$PROJECT_DIR/local.properties"
-          # 4. Build
-          cd "$PROJECT_DIR"
-          chmod +x gradlew
-          # wrapper fix if needed
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            mkdir -p gradle/wrapper
-            curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
-          fi
-          ./gradlew assembleDebug --stacktrace
-          echo "--- APKs found ---"
-          find . -name "*.apk" -type f
+          GRADLEW=$(find . -name gradlew -type f | head -1)
+          DIR=$(dirname "$GRADLEW")
+          echo "Project at: $DIR"
+          cd "$DIR"
+          ls -la
+          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+          cat local.properties
+          # gradlew ko ignore karo, direct gradle use karo
+          gradle assembleDebug --stacktrace
+          echo "--- APKs ---"
+          find . -name "*.apk"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
